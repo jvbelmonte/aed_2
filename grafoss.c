@@ -1,124 +1,227 @@
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdbool.h>
 #include <limits.h>
 
-#define MAX_NODOS 20 // Numero max de nodos
+#define MAX_NODOS 20      //Numero max de nodos(vertices)
 
-typedef struct Nodo{
+int matrizAdj[MAX_NODOS][MAX_NODOS];    //Matriz de Adjacencia
+int qntdNos = 0;                       //Numero total de nodos
+
+typedef struct No{
     char id;
-    int indice;     //usado para matriz
+    int indice;
     int qntdVizinhos;
-    bool visit;
-    int distancia;   //etiqueta 1
-    Nodo* adj;       //etiqueta 2 nodo adjacente 
+    bool visited;
+    int distancia;
+    int paiAnt;
+    char pai;
     struct Aresta* vizinhos[];
-}*Nodo;
+}*nodo;
 
 typedef struct Aresta{
     int peso;
-    Nodo vizinho;
-}*Aresta;
+    nodo vizinho;
+}*aresta;
 
-int matrizAdj[MAX_NODOS][MAX_NODOS];
-int qntdNos = 0;
-Nodo vetorNodos[MAX_NODOS];
+//VETOR COM TODOS NODOS
+nodo vetNodos[MAX_NODOS];    
 
-Nodo criaNodo(char id){
-    matrizAdj[qntdNos][qntdNos] = 0; // idxid = 0 
+//GLOBAL VARIABLES
+int p, visitados, primeiro, menor;
+char id, id1,id2;
 
-    Nodo novo = (Nodo) malloc(sizeof(Nodo));
-    novo->distancia = MAX_NODOS;    //etiqueta 1
-    novo->adj = NULL;               //etiqueta 2
-    novo->id = id;
-    novo->visit = false;
-    novo->qntdVizinhos = 0;
-    novo->indice = qntdNos;
+// FUNCTIONS
+int menu(int opt);
+void option(int opt);
+nodo buscaNodos(char id);
+nodo criaNodo(char id);
+void ligaNodos(nodo id1, nodo id2, int pesoAresta);
+void imprimeMatriz();
+void dijkstra(char id);
+int procuraMenorDistancia();
 
-    vetorNodos[qntdNos] = novo;     //salva novo nodo no vetor dos nodos
-    qntdNos++;
-return novo;
-}
 
-void ligaNodos(char id1, char id2, int peso){
+int main(){
 
-    Nodo aux1 = (Nodo) malloc(sizeof(Nodo));
-    Nodo aux2 = (Nodo) malloc(sizeof(Nodo));
-
-    aux1 = buscaNodos(id1);
-    aux2 = buscaNodos(id2);
-
-    if((aux1 != NULL) && (aux2 != NULL)){
-        matrizAdj[aux1->indice][aux2->indice] = peso;
-        aux1->vizinhos[aux1->qntdVizinhos]->vizinho = aux2;
-        aux1->vizinhos[aux1->qntdVizinhos]->peso = peso;
-        aux1->qntdVizinhos++;
-    }
-
-}
-
-Nodo buscaNodos(char id){
-    Nodo n = (Nodo) malloc(sizeof(Nodo));
-
-    for(int i=0; i<qntdNos; i++){
-        if(vetorNodos[i]->id == id){
-            n = vetorNodos[i];
-            return n;
-        }
-    }
-    printf("Nao existe o nodo\n");
-    free(n);
-    return NULL; 
-}
-
-void calculaMenorCaminho(Nodo o, Nodo d){
-
-    if(o->qntdVizinhos == 0){
-        printf("O vertice origem nao possui vizinhos\n");
-        return;
-    }
-
-    Nodo aux1 = (Nodo) malloc(sizeof(Nodo));
-    Nodo aux2 = (Nodo) malloc(sizeof(Nodo));
-
-    aux1 = buscaNodos(o->id);
-    aux2 = buscaNodos(d->id);
-
-    if((aux1 == NULL) || (aux2 == NULL)){
-        printf("Nodo nao existen te\n");
-        return;
-    }
-
-    o->visit = true;
-    o->adj = o;
-    o->distancia = 0;
-
-    //etiqueta para os vizinhos do nodo origem
-    for(int i=0; i<(o->qntdVizinhos); i++){
-        o->vizinhos[i]->vizinho->distancia = o->vizinhos[i]->peso;  //et 1
-        o->vizinhos[i]->vizinho->adj = o;                           //et 2
-        o->vizinhos[i]->vizinho->visit = true;
-    }    
-
+    int opt;
     do{
-        
+        opt = menu(opt);
+        option(opt);
+    }while(opt != 0);
 
-    }while(d->visit==false);
-    
-    
 
+    return 0;
 }
 
-void buscaRecursiva(Nodo n, Nodo final){
-    for(int i=0; i<n->qntdVizinhos;i++){
-        n->vizinhos[i]->vizinho->visit = true;    
-        if(n->vizinhos[i]->vizinho->distancia > (n->distancia + n->vizinhos[i]->peso)){
-            n->vizinhos[i]->vizinho->distancia = (n->distancia + n->vizinhos[i]->peso);
-            n->vizinhos[i]->vizinho->adj = n;
+
+int menu(int opt){
+
+	 printf("\n--Escolha a opcao--\n");
+	 printf("0. Sair\n");
+	 printf("1. Adicionar Nodo\n");
+	 printf("2 - Ligar Nodos\n");
+     printf("3 - Dijkstra\n");
+
+	 printf("Opcao: "); scanf("%d", &opt);
+
+ return opt;
+}
+
+void option(int opt){
+    switch (opt){
+        case 1:{
+            printf("Identificador do nodo:\n");
+            scanf(" %c", &id);
+            if(buscaNodos(id) == NULL){
+                vetNodos[qntdNos] = criaNodo(id);
+            }else{
+                printf("ID Nodo ja existente\n");
+            }
+
+            break;
         }
-    
-    buscaRecursiva(n->vizinhos[i]->vizinho, final);
-    }
+
+        case 2:{
+            nodo aux1 = (nodo) malloc(sizeof(nodo));
+            nodo aux2 = (nodo) malloc(sizeof(nodo));
+            printf("Nodos a serem ligados e seu peso: \n");
+            scanf(" %c %c %d", &id1, &id2, &p);
+            aux1 = buscaNodos(id1);
+            aux2 = buscaNodos(id2);
+                if (aux1  == NULL || aux2 == NULL) {
+                    printf("Não existe este Nodo\n");
+                    break;
+                }else{
+                    ligaNodos(aux1, aux2, p);
+                }
+            break;
+        }
+
+        case 3:{
+            printf("Nodo Inicial:\n");
+            scanf(" %c", &id);
+
+            dijkstra(id);
+        }
+
+
+        default:{
+            printf("Invalid option\n");
+            break;
+        }
+
+        }
 }
 
-//mostrar resultado a partir do vetor de nodos
+    nodo buscaNodos(char id){
+        for(int i =0; i<qntdNos; i++){
+            if(id == vetNodos[i]->id){
+                return vetNodos[i];
+            }
+        }
+        return NULL;
+    }
+
+    nodo criaNodo(char id){
+        matrizAdj[qntdNos][qntdNos] = 0;
+        nodo novo = (nodo) malloc(sizeof(nodo));
+        novo->id = id;
+        novo->indice = qntdNos;
+        novo->qntdVizinhos = 0;
+        novo->visited = false;
+        novo->paiAnt = -1;
+        qntdNos++;
+
+        return novo;
+    }
+
+    void ligaNodos(nodo id1, nodo id2, int pesoAresta){
+        matrizAdj[id1->indice][id2->indice] = pesoAresta;
+
+        aresta nova = (aresta) malloc(sizeof(aresta));
+        nova->vizinho = id2;
+        nova->peso = pesoAresta;
+        id1->vizinhos[id1->qntdVizinhos] = nova;
+        id1->qntdVizinhos++;
+    }
+    
+    void dijkstra(char id){
+       if(buscaNodos(id) == NULL){
+           printf("Nodo inexistente\n");
+           return ;
+       }
+        
+        visitados = qntdNos;
+        nodo aux = (nodo) malloc(sizeof(nodo));
+
+        //inicializar nodos
+       for(int i = 0; i<qntdNos; i++){
+           //para nodo origem
+           if(vetNodos[i]->id == id){
+               vetNodos[i]->distancia = 0;
+               vetNodos[i]->paiAnt = i;
+               vetNodos[i]->pai = vetNodos[i]->id;
+               vetNodos[i]->visited = false;
+           //outros nodos    
+           }else{
+               vetNodos[i]->distancia = INT_MAX;
+               vetNodos[i]->paiAnt = INT_MAX;
+               vetNodos[i]->visited = false;
+           }
+       } 
+
+       while(visitados > 0){
+
+        p = procuraMenorDistancia(); 
+            if(p == INT_MAX){
+                printf("Grafo Desconexo\n");
+                break;
+            }
+        //seta noodo como visitado 
+        vetNodos[p]->visited = true; 
+        visitados--;
+
+        //vai em todos vizinhos do nodo
+        for(int i=0; i < (vetNodos[p]->qntdVizinhos); i++){
+            aux = vetNodos[p]->vizinhos[i];
+
+            if(aux->distancia = INT_MAX){
+              aux->distancia = (vetNodos[p]->vizinhos[i]->peso) + (vetNodos[p]->distancia); 
+              aux->pai = vetNodos[p]->id;
+              aux->paiAnt = p;
+
+            }else{
+                if(aux->distancia > ((vetNodos[p]->vizinhos[i]->peso) + (vetNodos[p]->distancia))){
+                    aux->distancia = ((vetNodos[p]->vizinhos[i]->peso) + (vetNodos[p]->distancia));
+                    aux->pai = vetNodos[p]->id;
+                    aux->paiAnt = p;
+                }
+            }
+        }
+       }     
+        printf("Menor caminho partindo de %c : \n" , id);
+            for(int i=0; i<qntdNos; i++){
+                printf("Nodo %c, (%c,%d)\n", vetNodos[i]->id, vetNodos[i]->pai, vetNodos[i]->distancia);
+            }
+    } 
+
+    int procuraMenorDistancia(){
+        menor = INT_MAX; 
+        primeiro = 1;
+
+        for(int i=0; i<qntdNos; i++){
+             if((vetNodos[i]->distancia != INT_MAX) && (vetNodos[i]->visited = false)){
+                 if(primeiro){
+                     menor = i;
+                     primeiro = 0;
+                 }else{
+                     if(vetNodos[menor]->distancia > vetNodos[i]->distancia){
+                         menor = i;
+                     }
+                 }  
+             }
+        }
+        return menor;
+    }
+
